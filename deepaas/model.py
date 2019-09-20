@@ -15,14 +15,15 @@
 # under the License.
 
 import abc
+import logging
 
-from oslo_log import log
+#from oslo_log import log
 import six
 import werkzeug.exceptions as exceptions
 
 from deepaas import loading
 
-LOG = log.getLogger(__name__)
+LOG = logging.getLogger(__name__)
 
 # Model registry
 MODELS = {}

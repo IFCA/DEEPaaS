@@ -15,11 +15,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import logging
 import os
 import sys
+import warnings
 
 from oslo_config import cfg
-from oslo_log import log as logging
+from oslo_log import log as oslo_logging
+import six
 
 import deepaas
 from deepaas import api
@@ -60,17 +63,42 @@ port will is hardcoded to 8080 (as OpenWhisk goes to port 8080). Note that
 if you are running inside a container, the most sensible option is to set
 listen-ip to 0.0.0.0
 """),
+    cfg.BoolOpt('debug-endpoint',
+                default="false",
+                help="""
+Enable debug endpoint. If set we will provide all the information that you
+print to the standard output and error (i.e. stdout and stderr) through the
+"/debug" endpoint. Default is to not provide this information. This will not
+provide logging information about the API itself.
+"""),
 ]
 
 CONF = cfg.CONF
 CONF.register_cli_opts(cli_opts)
 
 
+class MultiOut(object):
+    def __init__(self, *args):
+        self.handles = args
+
+    def write(self, s):
+        for f in self.handles:
+            f.write(s)
+
+    def flush(self):
+        for f in self.handles:
+            f.flush()
+
+    def close(self):
+        for f in self.handles:
+            f.close()
+
+
 def main():
     _shutdown.handle_signals()
+    config.prepare_logging()
     config.parse_args(sys.argv)
-    logging.setup(CONF, "deepaas")
-    log = logging.getLogger(__name__)
+    log = oslo_logging.getLogger("deepaas")
 
     if CONF.openwhisk_detect and os.environ.get('__OW_API_HOST', None):
         log.info("Starting DEEPaaS (OpenWhisk) version %s",
@@ -78,9 +106,25 @@ def main():
 
         proxy.main()
     else:
+        debug_stream = None
+        if CONF.debug_endpoint:
+            debug_stream = six.StringIO()
+
+            logger = log.logger
+            logger.addHandler(logging.StreamHandler(debug_stream))
+
+            msg = ("\033[0;31;40m WARNING: Running API with debug endpoint! "
+                   "This will provide ALL the output without any kind of "
+                   "restrition in the /debug endpoint. Disable it whenever "
+                   "you have finished debugging your application. \033[0m")
+            warnings.warn(msg, RuntimeWarning)
+
+            sys.stdout = MultiOut(debug_stream, sys.stdout)
+            sys.stderr = MultiOut(debug_stream, sys.stderr)
+
         log.info("Starting DEEPaaS version %s", deepaas.__version__)
 
-        app = api.get_app()
+        app = api.get_app(stream=debug_stream)
         app.run(
             host=CONF.listen_ip,
             port=CONF.listen_port,

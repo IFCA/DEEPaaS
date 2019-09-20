@@ -19,10 +19,18 @@ import copy
 import flask
 import flask_restplus
 from flask_restplus import fields
+from oslo_config import cfg
+from oslo_log import log
 import werkzeug
 import werkzeug.exceptions as exceptions
 
 from deepaas import model
+
+CONF = cfg.CONF
+
+# Ugly global variable to provide a string stream to read the DEBUG output
+# if it is enabled
+DEBUG_STREAM = None
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_models()
@@ -30,6 +38,8 @@ model.register_models()
 api = flask_restplus.Namespace(
     'models',
     description='Model information, inference and training operations')
+
+LOG = log.getLogger("deepaas.api")
 
 # This should be removed with marshmallow whenever flask-restplus is ready
 data_parser = api.parser()
@@ -103,6 +113,17 @@ class Models(flask_restplus.Resource):
             m.update(meta)
             models.append(m)
         return {"models": models}
+
+
+@api.route('/debug')
+class DeepaasDebug(flask_restplus.Resource):
+    @api.produces("text/plain")
+    def get(self):
+        """Return debug information if enabled by API."""
+        print("--- DEBUG MARKER ---")
+        if DEBUG_STREAM is not None:
+            return DEBUG_STREAM.getvalue()
+        return ""
 
 
 prediction_links = api.model('PredictionLinks', {

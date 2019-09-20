@@ -28,11 +28,14 @@ LOG = logging.getLogger(__name__)
 APP = None
 
 
-def get_app(doc="/"):
+def get_app(doc="/", stream=None):
     """Get the Flask-RESTPlus app.
 
     Set doc to False if you do not want to get the Swagger documentation.
     """
+    if v1.DEBUG_STREAM is None and stream:
+        v1.DEBUG_STREAM = stream
+
     global APP
 
     if APP:
@@ -52,6 +55,13 @@ def get_app(doc="/"):
     )
 
     api.add_namespace(v1.api, path="/models")
+
+    # Add a text/plain representation so that we can return text as responses
+    @api.representation('text/plain')
+    def text_response(data, code, headers=None):
+        resp = APP.make_response(data)
+        resp.headers['Content-Type'] = 'text/plain'
+        return resp
 
     LOG.info("Serving loaded models: %s", model.MODELS.keys())
 
