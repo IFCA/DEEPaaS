@@ -15,13 +15,15 @@
 # under the License.
 
 
-import flask
+#import flask
+import aiohttp_apispec
+from aiohttp import web
 from oslo_config import cfg
 from oslo_log import log as logging
 
 from deepaas.api import v2
-from deepaas.api import versions
-from deepaas import model
+# from deepaas.api import versions
+# from deepaas import model
 
 LOG = logging.getLogger(__name__)
 
@@ -42,30 +44,40 @@ def get_app(doc="/", add_specs=True):
     if APP:
         return APP
 
-    APP = flask.Flask(__name__)
+    APP = web.Application(debug=CONF.debug)
 
-    model.register_v2_models()
+#    model.register_v2_models()
+#
+#    if CONF.enable_v1:
+#        from deepaas.api import v1  # noqa
+#
+#        model.register_v1_models()
+#        versions.register_version("v1", "v1.models_models")
+#        bp = v1.get_blueprint(doc=doc, add_specs=add_specs)
+#        APP.register_blueprint(bp)
+#        LOG.warning("Using V1 version of the API is not anymore supported "
+#                    "and marked as deprecated, please switch to V2 as soon "
+#                    "as possible.")
+#        LOG.info("Serving loaded V1 models: %s", list(model.V1_MODELS.keys()))
+#
+#    versions.register_version("v2", "v2.models_models")
+#
+#    for api in (v2, versions):
+    for api in (v2, ):
+        app = getattr(api, "get_app")(doc=doc, add_specs=add_specs)
+        APP.add_subapp("/v2", app)
+#
+#    APP.config.SWAGGER_UI_DOC_EXPANSION = 'list'
+#
+#    LOG.info("Serving loaded V2 models: %s", list(model.V2_MODELS.keys()))
 
-    if CONF.enable_v1:
-        from deepaas.api import v1  # noqa
-
-        model.register_v1_models()
-        versions.register_version("v1", "v1.models_models")
-        bp = v1.get_blueprint(doc=doc, add_specs=add_specs)
-        APP.register_blueprint(bp)
-        LOG.warning("Using V1 version of the API is not anymore supported "
-                    "and marked as deprecated, please switch to V2 as soon "
-                    "as possible.")
-        LOG.info("Serving loaded V1 models: %s", list(model.V1_MODELS.keys()))
-
-    versions.register_version("v2", "v2.models_models")
-
-    for api in (v2, versions):
-        bp = getattr(api, "get_blueprint")(doc=doc, add_specs=add_specs)
-        APP.register_blueprint(bp)
-
-    APP.config.SWAGGER_UI_DOC_EXPANSION = 'list'
-
-    LOG.info("Serving loaded V2 models: %s", list(model.V2_MODELS.keys()))
-
+    # init docs with all parameters, usual for ApiSpec
+    aiohttp_apispec.setup_aiohttp_apispec(
+        app=APP,
+        title="DEEP as a Service API endpoint",
+        description="DEEP as a Service (DEEPaaS) API endpoint.",
+#        version=deepaas.__version__,
+        url="/api/docs/swagger.json",
+        swagger_path="/api/docs",
+    )
     return APP

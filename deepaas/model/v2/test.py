@@ -15,6 +15,7 @@
 # under the License.
 
 from oslo_log import log
+from webargs import fields
 import werkzeug
 
 from deepaas.model.v2 import base
@@ -87,15 +88,16 @@ class TestModel(base.BaseModel):
         return parser
 
     def add_train_args(self, parser):
-        parser.add_argument('parameter_one',
-                            type=int,
-                            required=True,
-                            help='This is a integer parameter, and it is '
-                                 'a required one.')
-        parser.add_argument('parameter_two',
-                            type=str,
-                            help='This is a string parameter.')
-        return parser
+        return {
+            "parameter_one": fields.Int(
+                required=True,
+                descripton='This is a integer parameter, and it is '
+                           'a required one.'
+            ),
+            "parameter_two": fields.Str(
+                description='This is a string parameter.'
+            ),
+        }
 
     def get_metadata(self):
         d = {

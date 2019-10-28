@@ -18,6 +18,7 @@
 import os
 import sys
 
+from aiohttp import web
 from oslo_config import cfg
 from oslo_log import log as oslo_log
 
@@ -97,11 +98,10 @@ def main():
         log.info("Starting DEEPaaS version %s", deepaas.__version__)
 
         app = api.get_app()
-        app.run(
+        web.run_app(
+            app,
             host=CONF.listen_ip,
             port=CONF.listen_port,
-            debug=CONF.debug,
-            use_reloader=False
         )
 
 

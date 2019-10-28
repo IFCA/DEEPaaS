@@ -14,90 +14,97 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import flask
-import flask_restplus
-from flask_restplus import fields
+import aiohttp_apispec
+from aiohttp import web
+import marshmallow
+from marshmallow import fields
 
 from deepaas import model
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_v2_models()
 
-ns = flask_restplus.Namespace(
-    'models',
-    description='Model information, inference and training operations')
-
-model_links = ns.model('Location', {
-    "rel": fields.String(required=True),
-    "href": fields.String(required=True)
-})
-
-model_meta = ns.model('ModelMetadata', {
-    'id': fields.String(required=True, description='Model identifier'),
-    'name': fields.String(required=True, description='Model name'),
-    'description': fields.String(required=True,
-                                 description='Model description'),
-    'license': fields.String(required=False, description='Model license'),
-    'author': fields.String(required=False, description='Model author'),
-    'version': fields.String(required=False, description='Model version'),
-    'url': fields.String(required=False, description='Model url'),
-    'links': fields.List(fields.Nested(model_links))
-})
+app = web.Application()
+routes = web.RouteTableDef()
 
 
-@ns.route('/')
-class Models(flask_restplus.Resource):
-    @ns.marshal_with(model_meta, envelope='models')
-    def get(self):
-        """Return loaded models and its information.
-
-        DEEPaaS can load several models and server them on the same endpoint,
-        making a call to the root of the models namespace will return the
-        loaded models, as long as their basic metadata.
-        """
-
-        models = []
-        for name, obj in model.V2_MODELS.items():
-            m = {
-                "id": name,
-                "name": name,
-                "links": [{
-                    "rel": "self",
-                    "href": "%s%s" % (flask.request.path, name),
-                }]
-            }
-            meta = obj.get_metadata()
-            m.update(meta)
-            models.append(m)
-        return models
+class Location(marshmallow.Schema):
+    rel = fields.Str()
+    href = fields.Str()
 
 
-# It is better to create different routes for different models instead of using
-# the Flask pluggable views. Different models may require different parameters,
-# therefore we need to do like this.
-#
-# Therefore, in the next lines we iterate over the loaded models and create
-# the different resources for each model. This way we can also load the
-# expected parameters if needed (as in the training method).
+class ModelMeta(marshmallow.Schema):
+    id =  fields.Str(required=True, description='Model identifier'),  # noqa
+    name = fields.Str(required=True, description='Model name'),
+    description = fields.Str(required=True,
+                             description='Model description'),
+    license = fields.Str(required=False, description='Model license'),
+    author = fields.Str(required=False, description='Model author'),
+    version = fields.Str(required=False, description='Model version'),
+    url = fields.Str(required=False, description='Model url'),
+    links = fields.List(fields.Nested(Location))
+
+
+@aiohttp_apispec.docs(
+    tags=["models"],
+    name="Return loaded models and its information",
+    description="DEEPaaS can load several models and server them on the same "
+                "endpoint, making a call to the root of the models namespace "
+                "will return the loaded models, as long as their basic "
+                "metadata.",
+)
+@routes.get('/models')
+async def get(self):
+    """Return loaded models and its information.
+
+    DEEPaaS can load several models and server them on the same endpoint,
+    making a call to the root of the models namespace will return the
+    loaded models, as long as their basic metadata.
+    """
+
+    models = []
+    for name, obj in model.V2_MODELS.items():
+        m = {
+            "id": name,
+            "name": name,
+            "links": [{
+                "rel": "self",
+                "href": "%s/%s" % (self.path, name),
+            }]
+        }
+        meta = obj.get_metadata()
+        m.update(meta)
+        models.append(m)
+    return web.json_response({"models": models})
+
+
+# In the next lines we iterate over the loaded models and create the different
+# resources for each model. This way we can also load the expected parameters
+# if needed (as in the training method).
 for model_name, model_obj in model.V2_MODELS.items():
-    @ns.route('/%s' % model_name)
-    class BaseModel(flask_restplus.Resource):
+    @routes.view('/models/%s' % model_name)
+    class BaseModel(web.View):
         model_name = model_name
         model_obj = model_obj
 
-        @ns.response(200, "Success", model=model_meta)
-        def get(self):
+        @aiohttp_apispec.docs(
+            tags=["models"],
+            name="Return model metadata",
+        )
+        async def get(self):
             """Return the model's metadata."""
 
+            print(type(self))
+            print(dir(self))
             m = {
                 "id": self.model_name,
                 "name": self.model_name,
                 "links": [{
                     "rel": "self",
-                    "href": "%s" % flask.request.path,
+                    "href": "%s" % self.request.path,
                 }]
             }
             meta = self.model_obj.get_metadata()
             m.update(meta)
 
-            return m
+            return web.json_response(m)
