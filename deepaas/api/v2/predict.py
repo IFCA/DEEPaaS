@@ -14,13 +14,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import aiohttp_apispec
 from aiohttp import web
+import aiohttp_apispec
 from webargs import aiohttpparser
 import webargs.core
 
-from deepaas import model
 from deepaas.api.v2 import responses
+from deepaas import model
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_v2_models()
@@ -37,13 +37,6 @@ def _get_model_response(model_name, model_obj):
 
     return responses.Prediction
 
-
-#        return ns.schema_model(response_name, response_schema)
-
-#failure = ns.model('Failure', {
-#    "message": fields.String(required=True,
-#                             description="Failure message"),
-#})
 
 # It is better to create different routes for different models instead of using
 # the Flask pluggable views. Different models may require different parameters,

@@ -272,12 +272,12 @@ class ModelWrapper(object):
     def get_train_args(self, *args):
         try:
             return self._get_method("get_train_args")(*args)
-        except exceptions.NotImplemented:
+        except web.NotImplemented:
             return {}
 
     @catch_error
     def get_test_args(self, *args):
         try:
             return self._get_method("get_test_args")(*args)
-        except exceptions.NotImplemented:
+        except web.NotImplemented:
             return {}

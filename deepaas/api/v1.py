@@ -14,15 +14,15 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import aiohttp_apispec
 from aiohttp import web
+import aiohttp_apispec
 import marshmallow
 from marshmallow import fields
 from webargs import aiohttpparser
 import webargs.core
 
-from deepaas import model
 from deepaas.api.v2 import responses
+from deepaas import model
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_v1_models()
@@ -210,8 +210,7 @@ for model_name, model_obj in model.V1_MODELS.items():
 
             urls = args.get("urls")
             files = args.get("files")
-            if (not any([urls, files]) or
-                    all([urls, files])):
+            if (not any([urls, files]) or all([urls, files])):
                 raise web.HTTPBadRequest(
                     reason="You must provide either 'url' or "
                     "'data' in the payload"

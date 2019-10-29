@@ -14,12 +14,10 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import aiohttp_apispec
 from aiohttp import web
+import aiohttp_apispec
 from webargs import aiohttpparser
 import webargs.core
-# import marshmallow
-# from marshmallow import fields
 
 from deepaas import model
 

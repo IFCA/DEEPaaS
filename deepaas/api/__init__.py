@@ -20,10 +20,10 @@ import aiohttp_apispec
 from oslo_config import cfg
 from oslo_log import log as logging
 
+import deepaas
 from deepaas.api import v2
 from deepaas.api import versions
 from deepaas import model
-import deepaas
 
 LOG = logging.getLogger(__name__)
 

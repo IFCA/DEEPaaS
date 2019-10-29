@@ -14,11 +14,11 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import aiohttp_apispec
 from aiohttp import web
+import aiohttp_apispec
 
-from deepaas import model
 from deepaas.api.v2 import responses
+from deepaas import model
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_v2_models()

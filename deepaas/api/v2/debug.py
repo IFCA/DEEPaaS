@@ -19,8 +19,8 @@ import logging
 import sys
 import warnings
 
-import aiohttp_apispec
 from aiohttp import web
+import aiohttp_apispec
 from oslo_config import cfg
 from oslo_log import log
 import six

@@ -22,8 +22,8 @@ from oslo_log import log
 from deepaas.api.v2 import debug as v2_debug
 from deepaas.api.v2 import models as v2_model
 from deepaas.api.v2 import predict as v2_predict
-from deepaas.api.v2 import train as v2_train
 from deepaas.api.v2 import responses
+from deepaas.api.v2 import train as v2_train
 from deepaas import model
 
 CONF = cfg.CONF
@@ -33,6 +33,7 @@ LOG = log.getLogger("deepaas.api.v2")
 model.register_v2_models()
 
 APP = None
+
 
 def get_app():
     global APP
