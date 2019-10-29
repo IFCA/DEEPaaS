@@ -16,9 +16,9 @@
 
 import abc
 
+from aiohttp import web
 from oslo_log import log
 import six
-import werkzeug.exceptions as exceptions
 
 from deepaas.model import loading
 
@@ -214,8 +214,8 @@ def catch_error(f):
         try:
             return f(*args, **kwargs)
         except NotImplementedError:
-            raise exceptions.NotImplemented("Model does not implement "
-                                            "this functionality")
+            raise web.HTTPNotImplemented(
+                reason="Model does not implement this functionality")
     return wrap
 
 
@@ -234,8 +234,9 @@ class ModelWrapper(object):
         try:
             meth = getattr(self.model, method)
         except AttributeError:
-            raise exceptions.NotImplemented(
-                "Not implemented by underlying model (loaded '%s')" % self.name
+            raise web.HTTPNotImplemented(
+                reason="Not implemented by underlying model (loaded '%s')" %
+                self.name
             )
         return meth
 

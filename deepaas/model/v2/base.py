@@ -28,7 +28,8 @@ class BaseModel(object):
     is configured should expose the same API.
     """
 
-    response = None
+    # FIXME(aloga): document this
+    schema = None
     """Must contain a valid JSON schema for the model's predictions or None.
 
     The format should be a JSON schema (DRAFT 4)
@@ -115,7 +116,7 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def add_predict_args(self, parser):
+    def get_predict_args(self):
         """Populate the arguments that are needed to test the application.
 
         This method should return the parser that is passed as argument.
@@ -125,7 +126,7 @@ class BaseModel(object):
 
         :return: A parser containing the prediction arguments.
         """
-        return parser
+        raise NotImplementedError()
 
     @abc.abstractmethod
     def train(self, **kwargs):
@@ -141,7 +142,7 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
-    def add_train_args(self, parser):
+    def get_train_args(self):
         """Populate the arguments that are needed to train the application.
 
         This method should return the parser that is passed as argument.
@@ -151,4 +152,4 @@ class BaseModel(object):
 
         :return: A parser containing the training arguments.
         """
-        return parser
+        raise NotImplementedError()

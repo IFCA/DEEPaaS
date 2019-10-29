@@ -14,41 +14,36 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-import flask_restplus
-from flask_restplus import fields
+import aiohttp_apispec
+from aiohttp import web
+from webargs import aiohttpparser
+import webargs.core
 
 from deepaas import model
+from deepaas.api.v2 import responses
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_v2_models()
 
-ns = flask_restplus.Namespace(
-    'models',
-    description='Model information, inference and training operations')
+app = web.Application()
+routes = web.RouteTableDef()
 
 
 def _get_model_response(model_name, model_obj):
     response_schema = model_obj.response_schema
-    response_name = "ModelResponse %s" % model_name
 
     if response_schema is not None:
-        return ns.schema_model(response_name, response_schema)
+        return response_schema
 
-    response = ns.model(response_name, {
-        'status': fields.String(required=True,
-                                description='Response status message'),
-        'predictions': fields.String(
-            required=True,
-            description='String containing predictions'
-        )
-    })
-    return response
+    return responses.Prediction
 
 
-failure = ns.model('Failure', {
-    "message": fields.String(required=True,
-                             description="Failure message"),
-})
+#        return ns.schema_model(response_name, response_schema)
+
+#failure = ns.model('Failure', {
+#    "message": fields.String(required=True,
+#                             description="Failure message"),
+#})
 
 # It is better to create different routes for different models instead of using
 # the Flask pluggable views. Different models may require different parameters,
@@ -59,27 +54,27 @@ failure = ns.model('Failure', {
 # expected parameters if needed (as in the training method).
 for model_name, model_obj in model.V2_MODELS.items():
 
+    args = webargs.core.dict2schema(model_obj.get_predict_args())
     response = _get_model_response(model_name, model_obj)
 
-    @ns.route('/%s/predict' % model_name)
-    class ModelPredict(flask_restplus.Resource):
+    @routes.view('/models/%s/predict' % model_name)
+    class ModelPredict(web.View):
         model_name = model_name
         model_obj = model_obj
-        parser = model_obj.add_predict_args(ns.parser())
 
-        @ns.response(400, "Bad request", model=failure)
-        @ns.response(200, "Sucess", model=response)
-        @ns.expect(parser)
-        def post(self):
-            """Make a prediction given the input data."""
-
-            args = self.parser.parse_args()
-
+        @aiohttp_apispec.docs(
+            tags=["models"],
+            summary="Make a prediction given the input data"
+        )
+        @aiohttp_apispec.querystring_schema(args)
+        @aiohttp_apispec.response_schema(response(), 200)
+        @aiohttp_apispec.response_schema(responses.Failure(), 400)
+        @aiohttpparser.parser.use_args(args)
+        async def post(self, args):
             ret = self.model_obj.predict(**args)
 
             if self.model_obj.has_schema:
                 self.model_obj.validate_response(ret)
                 return ret
 
-            return {"status": "OK",
-                    "predictions": ret}
+            return web.json_response({"status": "OK", "predictions": ret})

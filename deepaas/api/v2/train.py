@@ -16,6 +16,7 @@
 
 import aiohttp_apispec
 from aiohttp import web
+from webargs import aiohttpparser
 import webargs.core
 # import marshmallow
 # from marshmallow import fields
@@ -33,22 +34,20 @@ routes = web.RouteTableDef()
 # resources for each model. This way we can also load the expected parameters
 # if needed (as in the training method).
 for model_name, model_obj in model.V2_MODELS.items():
-    args = webargs.core.dict2schema(model_obj.add_train_args(None))
+    args = webargs.core.dict2schema(model_obj.get_train_args())
 
     @routes.view('/models/%s/train' % model_name)
     class ModelTrain(web.View):
         model_name = model_name
         model_obj = model_obj
-#        parser = model_obj.add_train_args(ns.parser())
 
         @aiohttp_apispec.docs(
             tags=["models"],
-            name="Retrain model with available data"
+            summary="Retrain model with available data"
         )
-#        @ns.expect(parser)
         @aiohttp_apispec.querystring_schema(args)
-        async def put(self):
-            args = self.parser.parse_args()
+        @aiohttpparser.parser.use_args(args)
+        async def put(self, args):
             ret = self.model_obj.train(**args)
             # FIXME(aloga): what are we returning here? We need to take care
             # of these responses as well.

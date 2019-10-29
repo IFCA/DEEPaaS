@@ -16,10 +16,9 @@
 
 import aiohttp_apispec
 from aiohttp import web
-import marshmallow
-from marshmallow import fields
 
 from deepaas import model
+from deepaas.api.v2 import responses
 
 # Get the models (this is a singleton, so it is safe to call it multiple times
 model.register_v2_models()
@@ -28,33 +27,17 @@ app = web.Application()
 routes = web.RouteTableDef()
 
 
-class Location(marshmallow.Schema):
-    rel = fields.Str()
-    href = fields.Str()
-
-
-class ModelMeta(marshmallow.Schema):
-    id =  fields.Str(required=True, description='Model identifier'),  # noqa
-    name = fields.Str(required=True, description='Model name'),
-    description = fields.Str(required=True,
-                             description='Model description'),
-    license = fields.Str(required=False, description='Model license'),
-    author = fields.Str(required=False, description='Model author'),
-    version = fields.Str(required=False, description='Model version'),
-    url = fields.Str(required=False, description='Model url'),
-    links = fields.List(fields.Nested(Location))
-
-
 @aiohttp_apispec.docs(
     tags=["models"],
-    name="Return loaded models and its information",
+    summary="Return loaded models and its information",
     description="DEEPaaS can load several models and server them on the same "
                 "endpoint, making a call to the root of the models namespace "
                 "will return the loaded models, as long as their basic "
                 "metadata.",
 )
 @routes.get('/models')
-async def get(self):
+@aiohttp_apispec.response_schema(responses.ModelMeta(), 200)
+async def get(request):
     """Return loaded models and its information.
 
     DEEPaaS can load several models and server them on the same endpoint,
@@ -69,7 +52,7 @@ async def get(self):
             "name": name,
             "links": [{
                 "rel": "self",
-                "href": "%s/%s" % (self.path, name),
+                "href": "%s/%s" % (request.path, name),
             }]
         }
         meta = obj.get_metadata()
@@ -89,13 +72,10 @@ for model_name, model_obj in model.V2_MODELS.items():
 
         @aiohttp_apispec.docs(
             tags=["models"],
-            name="Return model metadata",
+            summary="Return '%s' model metadata" % model_name,
         )
+        @aiohttp_apispec.response_schema(responses.ModelMeta(), 200)
         async def get(self):
-            """Return the model's metadata."""
-
-            print(type(self))
-            print(dir(self))
             m = {
                 "id": self.model_name,
                 "name": self.model_name,
