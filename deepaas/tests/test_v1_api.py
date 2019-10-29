@@ -17,7 +17,7 @@
 import unittest
 import uuid
 
-import flask
+from aiohttp import web
 import mock
 import six
 
@@ -38,14 +38,12 @@ class TestApiV1(base.TestCase):
     def setUp(self):
         super(TestApiV1, self).setUp()
 
-        app = flask.Flask(__name__)
-        app.config['TESTING'] = True
-        app.config['DEBUG'] = True
+        app = web.Application(debug=True)
 
         deepaas.model.v1.register_models()
 
-        bp = v1.get_blueprint(doc=False, add_specs=False)
-        app.register_blueprint(bp)
+        v1app = v1.get_app()
+        app.add_subapp(v1app)
 
         self.app = app.test_client()
         self.assertEqual(app.debug, True)
