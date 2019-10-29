@@ -66,13 +66,15 @@ def get_app(doc="/docs"):
 
     LOG.info("Serving loaded V2 models: %s", list(model.V2_MODELS.keys()))
 
-    # init docs with all parameters, usual for ApiSpec
-    aiohttp_apispec.setup_aiohttp_apispec(
-        app=APP,
-        title="DEEP as a Service API endpoint",
-        description="DEEP as a Service (DEEPaaS) API endpoint.",
-        version=deepaas.__version__,
-        url="/swagger.json",
-        swagger_path=doc,
-    )
+    if doc:
+        # init docs with all parameters, usual for ApiSpec
+        aiohttp_apispec.setup_aiohttp_apispec(
+            app=APP,
+            title="DEEP as a Service API endpoint",
+            description="DEEP as a Service (DEEPaaS) API endpoint.",
+            version=deepaas.__version__,
+            url="/swagger.json",
+            swagger_path=doc,
+        )
+
     return APP

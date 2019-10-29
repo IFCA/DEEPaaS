@@ -15,11 +15,8 @@
 # under the License.
 
 from aiohttp import web
-import jsonschema
-import jsonschema.exceptions
 import marshmallow
 from oslo_log import log
-import werkzeug.exceptions as exceptions
 
 from deepaas.model import loading
 from deepaas.model.v2 import test
@@ -84,22 +81,27 @@ class ModelWrapper(object):
 
         schema = getattr(self.model, "schema", None)
 
-        if schema is not None:
+        if isinstance(schema, marshmallow.Schema):
+            self.has_schema = True
+        elif schema is not None:
             try:
                 if isinstance(schema, dict):
                     schema = marshmallow.Schema.from_dict(
                         schema,
                         name="ModelPredictionResponse"
                     )
+                else:
+                    raise web.HTTPInternalServerError(
+                        reason=("Model defined schema is invalid, "
+                                "check server logs.")
+                    )
             except Exception as e:
                 LOG.exception(e)
                 raise web.HTTPInternalServerError(
-                    description="Model defined schema is invalid, "
-                                "check server logs."
+                    reason=("Model defined schema is invalid, "
+                            "check server logs.")
                 )
 
-        if isinstance(schema, marshmallow.Schema):
-            self.has_schema = True
         else:
             self.has_schema = False
 
@@ -115,17 +117,17 @@ class ModelWrapper(object):
         :raises exceptions.InternalServerError: in case the reponse cannot be
             validated.
         """
-        if self.has_schema is not True:
-            raise exceptions.InternalServerError(
-                "Trying to validate against a schema, but I do not have one"
-                "defined")
-
-        try:
-            self.response_validator.validate(response)
-        except jsonschema.exceptions.ValidationError as e:
-            LOG.exception(e)
-            raise exceptions.InternalServerError(
-                description="ERROR marshaling response, check server logs.")
+#        if self.has_schema is not True:
+#            raise exceptions.InternalServerError(
+#                "Trying to validate against a schema, but I do not have one"
+#                "defined")
+#
+#        try:
+#            self.response_validator.validate(response)
+#        except jsonschema.exceptions.ValidationError as e:
+#            LOG.exception(e)
+#            raise exceptions.InternalServerError(
+#                description="ERROR marshaling response, check server logs.")
 
     def _call_method(self, method, *args, **kwargs):
         try:
@@ -181,26 +183,24 @@ class ModelWrapper(object):
     def predict(self, **kwargs):
         """Perform a prediction on wrapped model's ``predict`` method.
 
-        :raises werkzeug.exceptions.NotImplemented: If the method is not
+        :raises HTTPNotImplemented: If the method is not
             implemented in the wrapper model.
-        :raises werkzeug.exceptions.InternalServerError: If the call produces
+        :raises HTTPInternalServerError: If the call produces
             an error
-        :raises werkzeug.exceptions.HTTPException: If the call produces an
-            error, already wrapped as a werkzeug.exceptions.HTTPException
-            method
+        :raises HTTPException: If the call produces an
+            error, already wrapped as a HTTPException
         """
         return self._call_method("predict", **kwargs)
 
     def train(self, *args, **kwargs):
         """Perform a training on wrapped model's ``train`` method.
 
-        :raises werkzeug.exceptions.NotImplemented: If the method is not
+        :raises HTTPNotImplemented: If the method is not
             implemented in the wrapper model.
-        :raises werkzeug.exceptions.InternalServerError: If the call produces
+        :raises HTTPInternalServerError: If the call produces
             an error
-        :raises werkzeug.exceptions.HTTPException: If the call produces an
-            error, already wrapped as a werkzeug.exceptions.HTTPException
-            method
+        :raises HTTPException: If the call produces an
+            error, already wrapped as a HTTPException
         """
         return self._call_method("train", *args, **kwargs)
 
