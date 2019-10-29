@@ -16,7 +16,7 @@
 
 import unittest
 
-import flask
+from aiohttp import web
 
 from deepaas.api import v1
 from deepaas.api import v2
@@ -25,29 +25,21 @@ from deepaas.tests import base
 
 
 class TestApiVersions(base.TestCase):
-    def setUp(self):
-        super(TestApiVersions, self).setUp()
+    async def get_application(self):
+        app = web.Application(debug=True)
+        app.add_routes(versions.routes)
 
-        app = flask.Flask(__name__)
-        app.config['TESTING'] = True
-        app.config['DEBUG'] = True
+        return app
 
-        bp = versions.get_blueprint(doc=False, add_specs=False)
-        app.register_blueprint(bp)
-
-        self.app = app
-        self.cli = app.test_client()
-        self.assertEqual(app.debug, True)
-
-    def test_get_no_versions(self):
-        ret = self.cli.get("/")
+    async def test_get_no_versions(self):
+        ret = await self.client.get("/")
         self.assertEqual(200, ret.status_code)
         self.assertEqual({'versions': []}, ret.json)
 
-    def test_v1_version(self):
+    async def test_v1_version(self):
         versions.register_version("v1", "v1.models_models")
-        self.app.register_blueprint(v1.get_blueprint())
-        ret = self.cli.get("/")
+        self.client.register_blueprint(v1.get_blueprint())
+        ret = await self.client.get("/")
         self.assertEqual(200, ret.status_code)
         expect = {
             'versions': [
@@ -59,10 +51,10 @@ class TestApiVersions(base.TestCase):
         }
         self.assertDictEqual(expect, ret.json)
 
-    def test_v1_version_no_doc(self):
+    async def test_v1_version_no_doc(self):
         versions.register_version("v1", "v1.models_models")
-        self.app.register_blueprint(v1.get_blueprint(doc=False))
-        ret = self.cli.get("/")
+        self.client.register_blueprint(v1.get_blueprint(doc=False))
+        ret = await self.client.get("/")
         self.assertEqual(200, ret.status_code)
         expect = {
             'versions': [
@@ -75,10 +67,10 @@ class TestApiVersions(base.TestCase):
 
     @unittest.skip("Blocked by this stal pull request"
                    "https://github.com/noirbizarre/flask-restplus/pull/553")
-    def test_v1_version_no_swagger(self):
+    async def test_v1_version_no_swagger(self):
         versions.register_version("v1", "v1.models_models")
-        self.app.register_blueprint(v1.get_blueprint(add_specs=False))
-        ret = self.cli.get("/")
+        self.client.register_blueprint(v1.get_blueprint(add_specs=False))
+        ret = await self.client.get("/")
         self.assertEqual(200, ret.status_code)
         expect = {
             'versions': [
@@ -89,10 +81,10 @@ class TestApiVersions(base.TestCase):
         }
         self.assertDictEqual(expect, ret.json)
 
-    def test_v2_version_no_doc(self):
+    async def test_v2_version_no_doc(self):
         versions.register_version("v2", "v2.models_models")
-        self.app.register_blueprint(v2.get_blueprint(doc=False))
-        ret = self.cli.get("/")
+        self.client.register_blueprint(v2.get_blueprint(doc=False))
+        ret = await self.client.get("/")
         self.assertEqual(200, ret.status_code)
         expect = {
             'versions': [
@@ -105,10 +97,10 @@ class TestApiVersions(base.TestCase):
 
     @unittest.skip("Blocked by this stal pull request"
                    "https://github.com/noirbizarre/flask-restplus/pull/553")
-    def test_v2_version_no_swagger(self):
+    async def test_v2_version_no_swagger(self):
         versions.register_version("v2", "v2.models_models")
-        self.app.register_blueprint(v2.get_blueprint(add_specs=False))
-        ret = self.cli.get("/")
+        self.client.register_blueprint(v2.get_blueprint(add_specs=False))
+        ret = await self.client.get("/")
         self.assertEqual(200, ret.status_code)
         expect = {
             'versions': [
